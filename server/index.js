@@ -18,21 +18,21 @@ app.get('/', (req, res) => {
 })
 
 const generateRandomString = length => {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let text = ''
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
+    text += possible.charAt(Math.floor(Math.random() * possible.length))
   }
-  return text;
+  return text
 }
 
-const stateKey = 'spotify_auth_state';
+const stateKey = 'spotify_auth_state'
 
 app.get('/login', (req, res) => {
-  const state = generateRandomString(16);
-  res.cookie(stateKey, state);
+  const state = generateRandomString(16)
+  res.cookie(stateKey, state)
 
-  const scope = 'user-read-private user-read-email user-top-read';
+  const scope = 'user-read-private user-read-email user-top-read'
 
   const queryParams = querystring.stringify({
     client_id: CLIENT_ID,
@@ -40,13 +40,13 @@ app.get('/login', (req, res) => {
     redirect_uri: REDIRECT_URI,
     state: state,
     scope: scope,
-  });
+  })
 
-  res.redirect(`https://accounts.spotify.com/authorize?${queryParams}`);
+  res.redirect(`https://accounts.spotify.com/authorize?${queryParams}`)
 })
 
 app.get('/callback', (req, res) => {
-  const code = req.query.code || null;
+  const code = req.query.code || null
 
   axios({
     method: 'post',
@@ -61,21 +61,21 @@ app.get('/callback', (req, res) => {
       Authorization: `Basic ${new Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
     },
   })
-  .then(response => {
-    if (response.status === 200) {
-      const access_token = response.data.access_token;
-      res.redirect(`/?access_token=${access_token}`)
-    } else {
-      res.send(response);
-    }
-  })
-  .catch(error => {
-    res.send(error);
-  });
+    .then(response => {
+      if (response.status === 200) {
+        const access_token = response.data.access_token
+        res.redirect(`/?access_token=${access_token}`)
+      } else {
+        res.send(response)
+      }
+    })
+    .catch(error => {
+      res.send(error)
+    })
 })
 
 app.get('/refresh_token', (req, res) => {
-  const { refresh_token } = req.query;
+  const { refresh_token } = req.query
 
   axios({
     method: 'post',
@@ -90,16 +90,16 @@ app.get('/refresh_token', (req, res) => {
     },
   })
     .then(response => {
-      res.send(response.data);
+      res.send(response.data)
     })
     .catch(error => {
-      res.send(error);
-    });
-});
+      res.send(error)
+    })
+})
 
 app.get('/checkcheck', (req, res) => {
   // axios.get('http://api.musixmatch.com/ws/1.1/track.search?q_track=stargazing&q_artist=travis&f_has_lyrics&apikey=0ea84f76536adfd6e62c9da75ecdfe1e').then(response => console.log(response.data.message.body.track_list[0].track.track_id)).catch(error => console.log(error))
-  axios.get(`http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=154562034&apikey=0ea84f76536adfd6e62c9da75ecdfe1e`).then(response => res.send(response.data))
+  axios.get('http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=154562034&apikey=0ea84f76536adfd6e62c9da75ecdfe1e').then(response => res.send(response.data))
 })
 
 const PORT = 3001
