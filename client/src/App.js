@@ -30,18 +30,18 @@ const App = () => {
   }
 
   const handleProfile = () => {
-    axios.get('https://api.spotify.com/v1/albums/18NOKLkZETa4sWwLMIm0UZ/tracks', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    }).then(response => {
-      setTracks(response.data.items.map((song) => {
-        return song.name
-      }))
-      console.log(response.data)}
-    ).catch(error => {
-      console.log(error)
-    })
+    // axios.get('https://api.spotify.com/v1/albums/18NOKLkZETa4sWwLMIm0UZ/tracks', {
+    //   headers: {
+    //     Authorization: `Bearer ${accessToken}`
+    //   }
+    // }).then(response => {
+    //   setTracks(response.data.items.map((song) => {
+    //     return song.name
+    //   }))
+    //   console.log(response.data)}
+    // ).catch(error => {
+    //   console.log(error)
+    // })
 
     // axios.get('https://api.spotify.com/v1/tracks/0OEe83mMZ5kaNw5uZQ7ilG', {
     //   headers: {
@@ -49,15 +49,27 @@ const App = () => {
     //   }
     // }).then(response => console.log(response.data))
 
-    axios.get('https://api.spotify.com/v1/me/top/tracks?limit=50&offset=0', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
+    // axios.get('https://api.spotify.com/v1/me/top/tracks?limit=50&offset=0', {
+    //   headers: {
+    //     Authorization: `Bearer ${accessToken}`
+    //   }
+    // }).then(response => {
+    //   console.log(response.data)
+    // }).catch(error => {
+    //   console.log(error)  
+    // })
+
+    axios.get('/track', {
+      params: {
+        access_token: accessToken
       }
-    }).then(response => {
-      console.log(response.data)
-    }).catch(error => {
-      console.log(error)  
     })
+      .then(response => {
+        setTracks(response.data)
+      })
+      .catch(error => {
+        console.error(error)
+      })
   }
   
   const handleLogout = () => {

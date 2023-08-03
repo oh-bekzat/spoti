@@ -12,6 +12,7 @@ app.use(express.json())
 const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRET = process.env.CLIENT_SECRET
 const REDIRECT_URI = process.env.REDIRECT_URI
+const API_KEY = process.env.API_KEY
 
 app.get('/', (req, res) => {
   res.send('Thats the main page')
@@ -88,19 +89,37 @@ app.get('/refresh_token', (req, res) => {
       'content-type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${new Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
     },
+  }).then(response => {
+    res.send(response.data)
+  }).catch(error => {
+    res.send(error)
   })
-    .then(response => {
-      res.send(response.data)
-    })
-    .catch(error => {
-      res.send(error)
-    })
 })
 
-app.get('/checkcheck', (req, res) => {
-  // axios.get('http://api.musixmatch.com/ws/1.1/track.search?q_track=stargazing&q_artist=travis&f_has_lyrics&apikey=0ea84f76536adfd6e62c9da75ecdfe1e').then(response => console.log(response.data.message.body.track_list[0].track.track_id)).catch(error => console.log(error))
-  axios.get('http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=154562034&apikey=0ea84f76536adfd6e62c9da75ecdfe1e').then(response => res.send(response.data))
+app.get('/track', async (req, res) => {
+  const access_token = req.query.access_token
+  try {
+    const spotifyResponse = await axios.get('https://api.spotify.com/v1/me/top/tracks?limit=10', {
+      headers: {
+        Authorization: `Bearer ${access_token}`
+      }
+    })
+    const isrcs = spotifyResponse.data.items.map(song => song.external_ids.isrc)
+    console.log(isrcs)
+    const idsResponses = await Promise.all(isrcs.map(isrc => (
+      axios.get(`http://api.musixmatch.com/ws/1.1/track.get?track_isrc=${isrc}&apikey=${API_KEY}`)
+    )))
+    const ids = idsResponses.map(response => response.data.message.body.track.track_id)
+    console.log(ids)
+    const lyricsResponses = await Promise.all(ids.map(id => (
+      axios.get(`http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=${id}&apikey=${API_KEY}`)
+    )))
+    res.send(lyricsResponses.map(response => response.data.message.body.lyrics.lyrics_body.split('\n')))
+  } catch (error) {
+    res.send(error)
+  }
 })
+
 
 const PORT = 3001
 app.listen(PORT, () => {
