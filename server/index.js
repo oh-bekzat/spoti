@@ -14,10 +14,6 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET
 const REDIRECT_URI = process.env.REDIRECT_URI
 const API_KEY = process.env.API_KEY
 
-app.get('/', (req, res) => {
-  res.send('Thats the main page')
-})
-
 const generateRandomString = length => {
   let text = ''
   const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -45,10 +41,10 @@ app.get('/login', (req, res) => {
   res.redirect(`https://accounts.spotify.com/authorize?${queryParams}`)
 })
 
-app.get('/callback', (req, res) => {
+app.get('/callback', async (req, res) => {
   const code = req.query.code || null
 
-  axios({
+  const response = await axios({
     method: 'post',
     url: 'https://accounts.spotify.com/api/token',
     data: querystring.stringify({
@@ -61,23 +57,18 @@ app.get('/callback', (req, res) => {
       Authorization: `Basic ${new Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
     },
   })
-    .then(response => {
-      if (response.status === 200) {
-        const access_token = response.data.access_token
-        res.redirect(`/?access_token=${access_token}`)
-      } else {
-        res.send(response)
-      }
-    })
-    .catch(error => {
-      res.send(error)
-    })
+  if (response.status === 200) {
+    const access_token = response.data.access_token
+    res.redirect(`/?access_token=${access_token}`)
+  } else {
+    res.send(response.data)
+  }
 })
 
-app.get('/refresh_token', (req, res) => {
+app.get('/refresh_token', async (req, res) => {
   const { refresh_token } = req.query
 
-  axios({
+  const newToken = await axios({
     method: 'post',
     url: 'https://accounts.spotify.com/api/token',
     data: querystring.stringify({
@@ -86,46 +77,53 @@ app.get('/refresh_token', (req, res) => {
     }),
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${new Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
+      Authorization: `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
     },
-  }).then(response => {
-    res.send(response.data)
-  }).catch(error => {
-    res.send(error)
   })
+  res.send(newToken.data)
 })
 
 app.get('/track', async (req, res) => {
   const access_token = req.query.access_token
-  const spotifyResponse = await axios.get('https://api.spotify.com/v1/me/top/tracks?limit=50', {
+
+  const songs = await axios.get('https://api.spotify.com/v1/me/top/tracks?limit=50', {
     headers: {
       Authorization: `Bearer ${access_token}`
     }
   })
-  const isrcs = spotifyResponse.data.items.map(song => song.external_ids.isrc)
-  const selections = 5
-  const randomIsrcs = []
 
-  while (randomIsrcs.length < selections) {
-    const randomIndex = Math.floor(Math.random() * isrcs.length)
-    if (!randomIsrcs.includes(isrcs[randomIndex])) {
-      randomIsrcs.push(isrcs[randomIndex])
+  const selections = 4
+  const randomSongs = []
+
+  while (randomSongs.length < selections) {
+    const randomIndex = Math.floor(Math.random() * songs.data.items.length)
+    if (!randomSongs.includes(songs.data.items[randomIndex])) {
+      randomSongs.push(songs.data.items[randomIndex])
     }
   }
-  const idsResponses = await Promise.all(randomIsrcs.map(isrc => (
+
+  const titles = randomSongs.map(song => `${song.name} by ${song.artists[0].name}`)
+  const isrcs = randomSongs.map(song => song.external_ids.isrc)
+  console.log(titles)
+  const idsResponses = await Promise.all(isrcs.map(isrc => (
     axios.get(`http://api.musixmatch.com/ws/1.1/track.get?track_isrc=${isrc}&apikey=${API_KEY}`)
   )))
-  const ids = idsResponses.map(response => response.data.message.body.track.track_id)
-  console.log(ids)
-  const lyricsResponses = await Promise.all(ids.map(id => (
-    axios.get(`http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=${id}&apikey=${API_KEY}`)
-  )))
-  res.send(lyricsResponses.map(response => response.data.message.body.lyrics.lyrics_body
-    .split('\n')
-    .filter(line => line.trim() !== '')
-    .slice(3, 8)))
-})
 
+  const ids = idsResponses.map(response => response.data.message.body.track.track_id)
+
+  let lyrics
+
+  for (const id of ids) {
+    const response = await axios.get(`http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=${id}&apikey=${API_KEY}`)
+    const lyricsBody = response?.data?.message?.body?.lyrics?.lyrics_body
+    if (lyricsBody) {
+      lyrics = lyricsBody.split('\n').filter(line => line.trim() !== '').slice(3, 8)
+      break
+    }
+  }
+
+  res.send({ lyrics: lyrics, titles: titles })
+})
 
 const PORT = 3001
 app.listen(PORT, () => {

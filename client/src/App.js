@@ -3,7 +3,7 @@ import axios from 'axios'
 
 const App = () => {
   const [accessToken, setAccessToken] = useState(null)
-  const [tracks, setTracks] = useState([])
+  const [tracks, setTracks] = useState(null)
 
   useEffect(() => {
     const storedAccessToken = localStorage.getItem('accessToken')
@@ -73,9 +73,14 @@ const App = () => {
           <p>Access Token: {accessToken}</p>
           <button onClick={handleProfile}>Show user</button>
           <button onClick={handleLogout}>Logout</button>
-          <ul>
-            {tracks.map((track) => <li>{track.map((line) => <>{line}<br /></>)}</li>)}
-          </ul>
+          {tracks && (
+            <div>
+              <ul>
+                {tracks.titles.map(title => <li>{title}</li>)}
+              </ul>
+              {tracks.lyrics.map(line => <>{line}<br /></>)}
+            </div>
+          )}
         </div>
       ) : (
         <button onClick={() => window.location.href = '/login'}>Login with Spotify</button>
