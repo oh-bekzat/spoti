@@ -6,28 +6,16 @@ const App = () => {
   const [tracks, setTracks] = useState([])
 
   useEffect(() => {
-    const handleCallback = () => {
-      const params = new URLSearchParams(window.location.search)
-      const access_token = params.get('access_token')
-
-      if (access_token) {
-        localStorage.setItem('accessToken', access_token)
-        setAccessToken(access_token)
-        window.location.href = '/'
-      }
-    }
-
     const storedAccessToken = localStorage.getItem('accessToken')
-    if (storedAccessToken) {
-      setAccessToken(storedAccessToken)
+    if (storedAccessToken) { setAccessToken(storedAccessToken) }
+    const params = new URLSearchParams(window.location.search)
+    const access_token = params.get('access_token')
+    if (access_token) {
+      localStorage.setItem('accessToken', access_token)
+      setAccessToken(access_token)
+      window.location.href = '/'
     }
-
-    handleCallback()
   }, [])
-
-  const handleLogin = () => {
-    window.location.href = '/login'
-  }
 
   const handleProfile = () => {
     // axios.get('https://api.spotify.com/v1/albums/18NOKLkZETa4sWwLMIm0UZ/tracks', {
@@ -86,11 +74,11 @@ const App = () => {
           <button onClick={handleProfile}>Show user</button>
           <button onClick={handleLogout}>Logout</button>
           <ul>
-            {tracks.map((track) => <li>{track}</li>)}
+            {tracks.map((track) => <li>{track.map((line) => <>{line}<br /></>)}</li>)}
           </ul>
         </div>
       ) : (
-        <button onClick={handleLogin}>Login with Spotify</button>
+        <button onClick={() => window.location.href = '/login'}>Login with Spotify</button>
       )}
     </div>
   )
