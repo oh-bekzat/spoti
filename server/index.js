@@ -4,6 +4,18 @@ const axios = require('axios')
 const querystring = require('querystring')
 require('dotenv').config()
 const app = express()
+const mongoose = require('mongoose')
+const User = require('./models/user')
+
+mongoose.set('strictQuery', false)
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('Connected to MongoDB')
+  })
+  .catch((error) => {
+    console.log('Error connecting to MongoDB:', error.message)
+  })
 
 app.use(cors())
 app.use(express.static('build'))
@@ -43,7 +55,6 @@ app.get('/login', (req, res) => {
 
 app.get('/callback', async (req, res) => {
   const code = req.query.code || null
-
   const response = await axios({
     method: 'post',
     url: 'https://accounts.spotify.com/api/token',
@@ -65,6 +76,18 @@ app.get('/callback', async (req, res) => {
   }
 })
 
+app.post('/user', async (req, res) => {
+  const { spotifyId, lyrics } = req.body
+
+  const user = new User({
+    spotifyId, lyrics
+  })
+
+  const savedUser = await user.save()
+
+  res.status(201).json(savedUser)
+})
+
 app.get('/refresh_token', async (req, res) => {
   const { refresh_token } = req.query
 
@@ -82,6 +105,16 @@ app.get('/refresh_token', async (req, res) => {
   })
   res.send(newToken.data)
 })
+
+function fisherYatesShuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const temp = array[i]
+    array[i] = array[j]
+    array[j] = temp
+  }
+  return array
+}
 
 app.get('/track', async (req, res) => {
   const access_token = req.query.access_token
@@ -104,7 +137,7 @@ app.get('/track', async (req, res) => {
 
   const titles = randomSongs.map(song => `${song.name} by ${song.artists[0].name}`)
   const isrcs = randomSongs.map(song => song.external_ids.isrc)
-  console.log(titles)
+
   const idsResponses = await Promise.all(isrcs.map(isrc => (
     axios.get(`http://api.musixmatch.com/ws/1.1/track.get?track_isrc=${isrc}&apikey=${API_KEY}`)
   )))
@@ -112,17 +145,23 @@ app.get('/track', async (req, res) => {
   const ids = idsResponses.map(response => response.data.message.body.track.track_id)
 
   let lyrics
+  let lyricsIndex
 
   for (const id of ids) {
     const response = await axios.get(`http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=${id}&apikey=${API_KEY}`)
     const lyricsBody = response?.data?.message?.body?.lyrics?.lyrics_body
     if (lyricsBody) {
-      lyrics = lyricsBody.split('\n').filter(line => line.trim() !== '').slice(3, 8)
+      lyrics = lyricsBody.split('\n').filter(line => line.trim() !== '').slice(2, 6)
+      lyricsIndex = id
       break
     }
   }
 
-  res.send({ lyrics: lyrics, titles: titles })
+  const idTitles = ids.map((id, index) => ({ id: id, title: titles[index] }))
+
+  fisherYatesShuffle(idTitles)
+
+  res.send({ idTitles, lyricsIndex, lyrics })
 })
 
 const PORT = 3001

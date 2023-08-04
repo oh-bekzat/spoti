@@ -4,6 +4,7 @@ import axios from 'axios'
 const App = () => {
   const [accessToken, setAccessToken] = useState(null)
   const [tracks, setTracks] = useState(null)
+  const [score, setScore] = useState(0)
 
   useEffect(() => {
     const storedAccessToken = localStorage.getItem('accessToken')
@@ -17,36 +18,7 @@ const App = () => {
     }
   }, [])
 
-  const handleProfile = () => {
-    // axios.get('https://api.spotify.com/v1/albums/18NOKLkZETa4sWwLMIm0UZ/tracks', {
-    //   headers: {
-    //     Authorization: `Bearer ${accessToken}`
-    //   }
-    // }).then(response => {
-    //   setTracks(response.data.items.map((song) => {
-    //     return song.name
-    //   }))
-    //   console.log(response.data)}
-    // ).catch(error => {
-    //   console.log(error)
-    // })
-
-    // axios.get('https://api.spotify.com/v1/tracks/0OEe83mMZ5kaNw5uZQ7ilG', {
-    //   headers: {
-    //     Authorization: `Bearer ${accessToken}`
-    //   }
-    // }).then(response => console.log(response.data))
-
-    // axios.get('https://api.spotify.com/v1/me/top/tracks?limit=50&offset=0', {
-    //   headers: {
-    //     Authorization: `Bearer ${accessToken}`
-    //   }
-    // }).then(response => {
-    //   console.log(response.data)
-    // }).catch(error => {
-    //   console.log(error)  
-    // })
-
+  const handleQuiz = () => {
     axios.get('/track', {
       params: {
         access_token: accessToken
@@ -54,6 +26,7 @@ const App = () => {
     })
       .then(response => {
         setTracks(response.data)
+        console.log(response.data)
       })
       .catch(error => {
         console.error(error)
@@ -65,20 +38,44 @@ const App = () => {
     setAccessToken(null)
   }
 
+  const handleChoice = (id) => {
+    if (id === tracks?.lyricsIndex) {
+      setScore(score + 1)
+      handleQuiz()
+      console.log('Congrats! You chose the correct song!');
+    } else {
+      console.log('Oops! Try again!');
+    }
+  }
+
+  // const handleUser = async () => {
+  //   const user = await axios.get('https://api.spotify.com/v1/me', {
+  //     headers: {
+  //       Authorization: `Bearer ${accessToken}`
+  //     }
+  //   })
+
+  //   await axios.get('/user', 
+  //    { params: { user.data.id, songs }
+  //   })
+  // }
+
   return (
     <div>
       <h1>Spotify Authentication</h1>
       {accessToken ? (
         <div>
+          {/* <button onClick={() => handleUser()}>NEW USER</button> */}
           <p>Access Token: {accessToken}</p>
-          <button onClick={handleProfile}>Show user</button>
+          <button onClick={handleQuiz}>Show user</button>
           <button onClick={handleLogout}>Logout</button>
           {tracks && (
             <div>
               <ul>
-                {tracks.titles.map(title => <li>{title}</li>)}
+                {tracks.idTitles.map(idTitle => <button key={idTitle.id} onClick={() => handleChoice(idTitle.id)}>{idTitle.title}</button>)}
               </ul>
               {tracks.lyrics.map(line => <>{line}<br /></>)}
+              <p>Score: {score}</p>
             </div>
           )}
         </div>
