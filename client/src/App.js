@@ -5,6 +5,7 @@ const App = () => {
   const [accessToken, setAccessToken] = useState(null)
   const [tracks, setTracks] = useState(null)
   const [score, setScore] = useState(0)
+  const [question, setQuestion] = useState(0)
 
   useEffect(() => {
     const storedAccessToken = localStorage.getItem('accessToken')
@@ -39,9 +40,12 @@ const App = () => {
   }
 
   const handleChoice = (id) => {
-    if (id === tracks?.lyricsIndex) {
+    if (question === 9) {
+      console.log('stop')
+    }
+    if (id === tracks[question].lyricsIndex) {
       setScore(score + 1)
-      handleQuiz()
+      setQuestion(question + 1)
       console.log('Congrats! You chose the correct song!');
     } else {
       console.log('Oops! Try again!');
@@ -72,9 +76,11 @@ const App = () => {
           {tracks && (
             <div>
               <ul>
-                {tracks.idTitles.map(idTitle => <button key={idTitle.id} onClick={() => handleChoice(idTitle.id)}>{idTitle.title}</button>)}
+                {tracks[question].idTitles
+                  .map(idTitle => <button key={idTitle.id} onClick={() => handleChoice(idTitle.id)}>{idTitle.title}</button>)}
               </ul>
-              {tracks.lyrics.map(line => <>{line}<br /></>)}
+              {tracks[question].lyrics
+                .map(line => <>{line}<br /></>)}
               <p>Score: {score}</p>
             </div>
           )}

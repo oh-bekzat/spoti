@@ -84,7 +84,6 @@ app.post('/user', async (req, res) => {
   })
 
   const savedUser = await user.save()
-
   res.status(201).json(savedUser)
 })
 
@@ -125,43 +124,64 @@ app.get('/track', async (req, res) => {
     }
   })
 
+  const questions = 10
   const selections = 4
   const randomSongs = []
 
-  while (randomSongs.length < selections) {
-    const randomIndex = Math.floor(Math.random() * songs.data.items.length)
-    if (!randomSongs.includes(songs.data.items[randomIndex])) {
-      randomSongs.push(songs.data.items[randomIndex])
+  for (let i = 0; i < questions; i++) {
+    randomSongs.push([])
+    for (let j = 0; j < selections; j++) {
+      const randomIndex = Math.floor(Math.random() * songs.data.items.length)
+      if (!randomSongs[i].includes(songs.data.items[randomIndex])) {
+        randomSongs[i].push(songs.data.items[randomIndex])
+      }
     }
   }
 
-  const titles = randomSongs.map(song => `${song.name} by ${song.artists[0].name}`)
-  const isrcs = randomSongs.map(song => song.external_ids.isrc)
+  const titles = []
+  const isrcs = []
+  for (let i = 0; i < randomSongs.length; i++) {
+    titles[i] = randomSongs[i].map(song => `${song.name} by ${song.artists[0].name}`)
+    isrcs[i] = randomSongs[i].map(song => song.external_ids.isrc)
+  }
 
-  const idsResponses = await Promise.all(isrcs.map(isrc => (
-    axios.get(`http://api.musixmatch.com/ws/1.1/track.get?track_isrc=${isrc}&apikey=${API_KEY}`)
-  )))
+  const idsResponses = []
+  for (let i = 0; i < isrcs.length; i++) {
+    idsResponses[i] = await Promise.all(isrcs[i].map(isrc => (
+      axios.get(`http://api.musixmatch.com/ws/1.1/track.get?track_isrc=${isrc}&apikey=${API_KEY}`)
+    )))
+  }
 
-  const ids = idsResponses.map(response => response.data.message.body.track.track_id)
+  const ids = []
+  for (let i = 0; i < idsResponses.length; i++) {
+    ids[i] = idsResponses[i].map(response => response.data.message.body.track.track_id)
+  }
 
-  let lyrics
-  let lyricsIndex
-
-  for (const id of ids) {
-    const response = await axios.get(`http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=${id}&apikey=${API_KEY}`)
-    const lyricsBody = response?.data?.message?.body?.lyrics?.lyrics_body
-    if (lyricsBody) {
-      lyrics = lyricsBody.split('\n').filter(line => line.trim() !== '').slice(2, 6)
-      lyricsIndex = id
-      break
+  let lyrics = []
+  let lyricsIndex = []
+  for (let i = 0; i < ids.length; i++) {
+    for (const id of ids[i]) {
+      const response = await axios.get(`http://api.musixmatch.com/ws/1.1/track.lyrics.get?track_id=${id}&apikey=${API_KEY}`)
+      const lyricsBody = response?.data?.message?.body?.lyrics?.lyrics_body
+      if (lyricsBody) {
+        lyrics[i] = lyricsBody.split('\n').filter(line => line.trim() !== '').slice(2, 6)
+        lyricsIndex[i] = id
+        break
+      }
     }
   }
 
-  const idTitles = ids.map((id, index) => ({ id: id, title: titles[index] }))
-
-  fisherYatesShuffle(idTitles)
-
-  res.send({ idTitles, lyricsIndex, lyrics })
+  const songsResponse = []
+  for (let i = 0; i < ids.length; i++) {
+    const idTitles = ids[i].map((id, index) => ({ id: id, title: titles[i][index] }))
+    const entryObject = {
+      idTitles: fisherYatesShuffle(idTitles),
+      lyrics: lyrics[i],
+      lyricsIndex: lyricsIndex[i],
+    }
+    songsResponse.push(entryObject)
+  }
+  res.send(songsResponse)
 })
 
 const PORT = 3001
