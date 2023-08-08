@@ -118,25 +118,29 @@ function fisherYatesShuffle(array) {
 app.get('/track', async (req, res) => {
   const access_token = req.query.access_token
 
-  const songs = await axios.get('https://api.spotify.com/v1/me/top/tracks?limit=50', {
+  const songs = (await axios.get('https://api.spotify.com/v1/me/top/tracks?limit=50', {
     headers: {
       Authorization: `Bearer ${access_token}`
     }
-  })
+  })).data.items
+
+  fisherYatesShuffle(songs)
 
   const questions = 10
   const selections = 4
   const randomSongs = []
+  let currentIndex = 0
 
   for (let i = 0; i < questions; i++) {
-    randomSongs.push([])
+    const randomSet = []
     for (let j = 0; j < selections; j++) {
-      const randomIndex = Math.floor(Math.random() * songs.data.items.length)
-      if (!randomSongs[i].includes(songs.data.items[randomIndex])) {
-        randomSongs[i].push(songs.data.items[randomIndex])
-      }
+      randomSet.push(songs[currentIndex])
+      currentIndex = (currentIndex + 1) % songs.length
     }
+    randomSongs.push(randomSet)
   }
+
+  console.log(randomSongs)
 
   const titles = []
   const isrcs = []
@@ -173,9 +177,9 @@ app.get('/track', async (req, res) => {
 
   const songsResponse = []
   for (let i = 0; i < ids.length; i++) {
-    const idTitles = ids[i].map((id, index) => ({ id: id, title: titles[i][index] }))
+    const idTitles = fisherYatesShuffle(ids[i].map((id, index) => ({ id: id, title: titles[i][index] })))
     const entryObject = {
-      idTitles: fisherYatesShuffle(idTitles),
+      idTitles: idTitles,
       lyrics: lyrics[i],
       lyricsIndex: lyricsIndex[i],
     }
